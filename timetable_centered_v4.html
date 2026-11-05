@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시간표 만들기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Gowun+Dodum&family=Noto+Serif+KR:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#f2f5f7;--card:#fff;--tx:#14202e;--mut:#5d6b7a;--ac:#69b9e8;--bd:#d9e5ec;--el:#dff2ff;--elbd:#9bd4f4;--elx:#173b52;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171e;--card:#18222c;--tx:#e8eef3;--mut:#93a1af;--ac:#69b9e8;--bd:#2c3a47;--el:#29485a;--elbd:#5b9fc4;--elx:#e6f6ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10171e;--card:#18222c;--tx:#e8eef3;--mut:#93a1af;--ac:#69b9e8;--bd:#2c3a47;--el:#29485a;--elbd:#5b9fc4;--elx:#e6f6ff;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Gowun Dodum","Malgun Gothic",sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:24px;margin:6px 0 2px;text-align:center}
+h2{font-size:16px;margin:0 0 8px}
+.mut{color:var(--mut);margin:2px 0 8px;font-size:13px}
+nav{display:flex;gap:6px;margin:12px 0}
+nav button{flex:1}
+button{font:inherit;font-weight:600;padding:10px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+nav button.on,.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px}
+label{display:block;margin:10px 0 0;font-weight:600;font-size:14px}
+select,input,textarea{display:block;width:100%;margin-top:4px;padding:9px;font:inherit;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+summary{cursor:pointer;font-weight:600}
+
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.menu-card{background:var(--card);border:2px solid var(--bd);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:all .2s ease}
+.menu-card:hover{border-color:var(--ac);transform:translateY(-2px)}
+.menu-card h3{margin:0 0 8px;font-size:16px;color:var(--tx)}
+.menu-card p{margin:0;font-size:13px;color:var(--mut)}
+
+.timetable-header-box{position:relative;text-align:center;padding:10px 0 20px 0}
+.timetable-header-box h2{font-size:22px;margin:0;display:inline-block}
+.timetable-header-box .student-name-tag{position:absolute;right:8px;bottom:2px;font-size:14px;font-weight:600;color:var(--mut)}
+
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:500px;text-align:center;table-layout:fixed}
+th,td{border:1px solid var(--bd);padding:8px 5px;height:66px;vertical-align:middle;overflow-wrap:anywhere;word-break:keep-all;position:relative;background-clip:padding-box}
+#tb th:first-child,#grid th:first-child{width:8%}
+#tb th:not(:first-child),#tb td{width:18.4%}
+#grid th:not(:first-child),#grid td{width:18.4%}
+#tb td,#grid td{height:66px}
+#tb td,#grid td{text-align:center!important;vertical-align:middle!important}
+#tb td.el,#tb td.un{ text-align:center!important }
+#tb td.el strong,#tb td.el small,#tb td strong,#tb td small{display:block;width:100%;text-align:center!important;margin-left:auto;margin-right:auto}
+#grid td input{text-align:center}
+th{background:var(--bg);font-weight:600;font-size:13px;color:var(--mut)}
+
+/* 시간표 셀 스타일 (선택과목 및 공통과목) */
+td{
+  background-color:var(--card);
+  text-align:center;
+  vertical-align:middle;
+}
+td strong{
+  font-weight:700;
+  display:block;
+  width:100%;
+  text-align:center;
+  font-size:14px;
+  line-height:1.2;
+  color:var(--tx);
+}
+td small{
+  font-weight:400;
+  display:block;
+  width:100%;
+  text-align:center;
+  font-size:11px;
+  line-height:1.25;
+  color:var(--mut);
+  margin:2px 0 0;
+}
+
+/* 선택과목 셀 (배경색 지정) */
+td.el{background-color:var(--el) !important;border-color:var(--elbd)}
+td.el strong{color:var(--elx);font-weight:700}
+td.el small{color:var(--elx);font-weight:400;opacity:0.85}
+
+td.un{color:var(--mut)}
+td.un small{display:block;font-size:11px;font-weight:400}
+td input{padding:6px 3px;margin:0;text-align:center;border:0;background:transparent;min-width:0;width:100%}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:8px}[hidden]{display:none!important}
+
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:9999;padding:16px}
+.modal-overlay.active{display:flex}
+.modal-content{background:var(--card);padding:20px;border-radius:12px;max-width:95%;max-height:90vh;overflow-y:auto;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.2)}
+.modal-content img{display:block;max-width:100%;height:auto;border:1px solid var(--bd);border-radius:8px;margin:12px auto}
+
+@media print{.np{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<main>
+<header class="np">
+  <h1>시간표 만들기</h1>
+  <p class="mut" style="text-align:center;">반 시간표에 내가 고른 선택과목을 넣어 개인 시간표를 만들어요.</p>
+  <nav id="topNav" hidden>
+    <button data-tab="s" class="on" id="studentTab">내 시간표</button>
+    <button data-tab="a" id="adminTab">회장용 설정</button>
+  </nav>
+</header>
+
+<section id="menuSelect">
+  <div class="menu-grid">
+    <div class="menu-card" id="btnGoStudent">
+      <h3>(1) 내 시간표 만들기</h3>
+      <p>회장이 준 코드를 불러와 개인 시간표를 작성합니다.</p>
+    </div>
+    <div class="menu-card" id="btnGoAdmin">
+      <h3>(2) 회장용 설정 변경</h3>
+      <p>회장 전용 코드를 입력하여 전체 시간표 틀을 설정합니다.</p>
+    </div>
+  </div>
+</section>
+
+<section id="adminAuthCard" class="card np" hidden>
+  <h2>회장 인증</h2>
+  <p class="mut">회장용 설정으로 들어가려면 회장 코드를 입력하세요.</p>
+  <input type="password" id="adminCodeInput" placeholder="회장 코드를 입력하세요">
+  <div class="row">
+    <button id="btnVerifyAdmin" class="pri">인증하기</button>
+    <button id="btnCancelAdmin">취소</button>
+  </div>
+</section>
+
+<section id="s" hidden>
+  <div class="card np" id="importCard">
+    <h2>회장이 준 코드를 불러오세요</h2>
+    <p class="mut">회장이 공유한 코드를 붙여넣으면 개인 시간표를 만들 수 있어요.</p>
+    <textarea id="inCode" rows="4" placeholder="공유받은 코드를 여기에 붙여넣으세요"></textarea>
+    <div class="row">
+      <button id="load" class="pri">코드 불러오기</button>
+      <button id="backToMenuFromImport">메인으로 돌아가기</button>
+    </div>
+    <p class="mut" id="msg"></p>
+  </div>
+
+  <div id="studentArea" hidden>
+    <div class="card np">
+      <label>이름<input id="studentName" placeholder="이름을 입력하세요"></label>
+      <label>내 반<select id="cls"></select></label>
+      <div id="picks"></div>
+    </div>
+    <div class="card np">
+      <h2>내 시간표 꾸미기</h2>
+      <div class="settings">
+        <label>시간표 글씨체<select id="fontChoice">
+          <option value="rounded">둥근 고딕</option>
+          <option value="pretendard">기본 고딕</option>
+          <option value="serif">명조체</option>
+          <option value="mono">모노스페이스</option>
+        </select></label>
+        <label>선택과목 색상<select id="colorChoice">
+          <option value="pink">🔴 파스텔 빨강</option>
+          <option value="orange">🟠 파스텔 주황</option>
+          <option value="yellow">🟡 파스텔 노랑</option>
+          <option value="green">🟢 파스텔 초록</option>
+          <option value="blue" selected>🔵 파스텔 파랑</option>
+          <option value="purple">🟣 파스텔 보라</option>
+          <option value="gray">⚪ 파스텔 회색</option>
+        </select></label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="timetable-header-box">
+        <h2 id="scheduleTitle">반 시간표</h2>
+        <div class="student-name-tag" id="studentNameDisplay">이름: 미입력</div>
+      </div>
+      <div class="tw"><table id="tb"></table></div>
+      <div class="row np">
+        <button id="pr" class="pri">인쇄 / PDF 저장</button>
+        <button id="csv">CSV 저장</button>
+        <button id="png">이미지(PNG) 저장</button>
+      </div>
+      <p class="mut np" id="exportMsg"></p>
+    </div>
+    <div class="card np">
+      <button id="changeCode">다른 코드 불러오기 / 메인으로</button>
+    </div>
+  </div>
+</section>
+
+<section id="a" hidden>
+  <div class="card">
+    <h2>회장 코드 변경 설정</h2>
+    <label>회장 전용 인증 코드<input id="adminCodeSetting" value="1234" placeholder="인증 코드 설정"></label>
+  </div>
+  <div class="card">
+    <h2>1. 기본 정보</h2>
+    <div class="settings">
+      <label>학년<input id="gradeIn" placeholder="예: 2학년"></label>
+      <label>학기<input id="semesterIn" placeholder="예: 1학기"></label>
+    </div>
+    <label>반 이름 (쉼표로 구분)<input id="clsIn" placeholder="1반, 2반, 3반"></label>
+    <label>하루 교시 수<input id="perIn" type="number" min="1" max="10"></label>
+  </div>
+  <div class="card">
+    <h2>2. 선택과목 묶음</h2>
+    <p class="mut">선택과목 묶음 수와 이름을 정한 뒤, 한 줄에 하나씩 과목을 입력해요. 과목 뒤 괄호에 선생님과 교실을 적을 수 있어요. (쉼표가 없으면 교실 생략 가능)</p>
+    <label>선택과목 묶음 수<input id="groupCount" type="number" min="1" max="12" value="3"></label>
+    <label>선택과목 묶음 이름 (쉼표로 구분)<input id="groupNames" placeholder="선택A, 선택B, 선택C"></label>
+    <label>묶음별 과목 및 정보<textarea id="grpIn" rows="7" placeholder="선택A: 물리학(손유라, 2-3)&#10;선택B: 한국지리(이선생, 3-1)"></textarea></label>
+  </div>
+  <div class="card">
+    <h2>3. 반별 시간표</h2>
+    <p class="mut">선택과목 시간에는 묶음 이름(예: 선택A)을 적고, 공동 시간표는 "과목명(선생님, 교실)" 형식으로 적을 수 있어요. (쉼표 미사용 시 교실 생략 가능)</p>
+    <select id="aCls"></select>
+    <div class="tw" style="margin-top:8px"><table id="grid"></table></div>
+    <datalist id="gl"></datalist>
+    <div class="row" style="margin-top:12px;">
+      <button id="btnSaveAdminGrid" class="pri">시간표 변경사항 저장하기</button>
+    </div>
+    <p class="mut" id="saveMsg" style="margin-top:4px;color:var(--ac);"></p>
+  </div>
+  <div class="card">
+    <h2>4. 학생들에게 나눠주기</h2>
+    <p class="mut">코드를 만들어 단체방에 올리면, 학생들이 이 페이지에서 붙여넣어 쓸 수 있어요.</p>
+    <div class="row"><button id="mk" class="pri">코드 만들기</button><button id="cp">코드 복사</button></div>
+    <textarea id="outCode" rows="3" readonly></textarea>
+    <p class="mut" id="cmsg"></p>
+    <div class="row"><button id="reset">샘플로 되돌리기</button></div>
+  </div>
+</section>
+</main>
+
+<div id="previewModal" class="modal-overlay">
+  <div class="modal-content">
+    <h2>시간표 이미지 미리보기</h2>
+    <p class="mut">아래 이미지를 확인한 뒤 다운로드하세요.</p>
+    <div id="modalImgBox"></div>
+    <div class="row" style="justify-content:center; margin-top:15px;">
+      <button id="btnDownloadImg" class="pri">다운로드</button>
+      <button id="btnCloseModal">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS=['월','화','수','목','금'];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+
+function sample(){
+  const rows=[
+    ['국어','수학','영어','선택A','선택B','체육','창체'],
+    ['수학','영어','선택C','국어','한국사','선택A','과학탐구'],
+    ['영어','국어','수학','선택B','선택C','음악','진로'],
+    ['선택A','선택B','국어','수학','영어','미술','자율'],
+    ['한국사','선택C','선택A','영어','수학','체육','동아리']];
+  const tt={};
+  ['1반','2반'].forEach(c=>tt[c]=rows.map(r=>r.slice()));
+  return {grade:'2학년',semester:'1학기',periods:7,classes:['1반','2반'],
+    groupText:'선택A: 물리, 화학, 생명과학\n선택B: 한국지리, 세계사, 경제\n선택C: 심리학, 철학, 정치와법',tt};
+}
+
+let D=get('tt-data')||sample(), CH=get('tt-pick')||{}, cur='', aCur='';
+let imported=!!get('tt-imported');
+let prefs=get('tt-prefs')||{font:'rounded',color:'blue'};
+let studentName=get('tt-student-name')||'';
+let adminCode=get('tt-admin-code')||'1234';
+let pendingBlob=null;
+
+const save=()=>put('tt-data',D);
+
+function splitItems(text){
+  const out=[]; let part='', depth=0;
+  for(const ch of text){
+    if(ch==='('||ch==='（')depth++;
+    if(ch===')'||ch==='）')depth=Math.max(0,depth-1);
+    if((ch===','||ch==='，')&&depth===0){if(part.trim())out.push(part.trim());part='';}
+    else part+=ch;
+  }
+  if(part.trim())out.push(part.trim());
+  return out;
+}
+function parseCourse(raw){
+  const m=String(raw).trim().match(/^(.*?)\s*[（(]\s*(.*?)\s*[）)]\s*$/);
+  if(!m)return {raw:String(raw).trim(),name:String(raw).trim(),teacher:'',room:''};
+  const details=splitItems(m[2]);
+  return {raw:String(raw).trim(),name:m[1].trim(),teacher:details[0]||'',room:details[1]||''};
+}
+function groups(){
+  const g={};
+  (D.groupText||'').split('\n').forEach(l=>{
+    const i=l.search(/[:：]/); if(i<1)return;
+    const n=l.slice(0,i).trim();
+    const o=splitItems(l.slice(i+1)).map(parseCourse).filter(x=>x.name);
+    if(n)g[n]=o;
+  });
+  return g;
+}
+function groupLines(){return (D.groupText||'').split('\n').filter(l=>l.trim());}
+function syncGroupControls(){
+  const names=groupLines().map(l=>{const i=l.search(/[:：]/);return i>0?l.slice(0,i).trim():''}).filter(Boolean);
+  $('#groupCount').value=names.length||3;
+  $('#groupNames').value=names.join(', ');
+}
+
+function fit(){
+  D.classes.forEach(c=>{
+    D.tt[c]=D.tt[c]||[];
+    for(let d=0;d<5;d++){
+      const r=D.tt[c][d]=D.tt[c][d]||[];
+      r.length=D.periods;
+      for(let p=0;p<D.periods;p++)r[p]=r[p]||'';
+    }
+  });
+}
+
+$('#btnGoStudent').onclick=()=>{
+  $('#menuSelect').hidden=true;
+  $('#adminAuthCard').hidden=true;
+  $('#s').hidden=false;
+  if(imported){
+    $('#importCard').hidden=true;
+    $('#studentArea').hidden=false;
+    $('#topNav').hidden=false;
+    rS(); rA();
+  } else {
+    $('#importCard').hidden=false;
+    $('#studentArea').hidden=true;
+  }
+};
+
+$('#btnGoAdmin').onclick=()=>{
+  $('#adminAuthCard').hidden=false;
+  $('#adminCodeInput').value='';
+};
+
+$('#btnCancelAdmin').onclick=()=>{
+  $('#adminAuthCard').hidden=true;
+};
+
+$('#btnVerifyAdmin').onclick=()=>{
+  const val=$('#adminCodeInput').value;
+  if(val===adminCode){
+    $('#adminAuthCard').hidden=true;
+    $('#menuSelect').hidden=true;
+    $('#s').hidden=true;
+    $('#a').hidden=false;
+    $('#topNav').hidden=false;
+    document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==='a'));
+    rA(); rS();
+  } else {
+    alert('코드가 틀렸습니다.');
+  }
+};
+
+$('#backToMenuFromImport').onclick=()=>{
+  $('#s').hidden=true;
+  $('#menuSelect').hidden=false;
+};
+
+const fontsMap = {
+  pretendard: '"IBM Plex Sans KR", sans-serif',
+  serif: '"Noto Serif KR", serif',
+  rounded: '"Gowun Dodum", sans-serif',
+  mono: '"D2Coding", monospace'
+};
+
+function rS(){
+  const g=groups(); fit();
+  if(!D.classes.includes(cur))cur=D.classes[0];
+  $('#cls').innerHTML=D.classes.map(c=>`<option ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
+  // 회장이 입력한 선택과목 묶음 순서(Object.keys(g))를 그대로 유지
+  const used=Object.keys(g).filter(n=>D.tt[cur].some(day=>day.includes(n)));
+  const pk=CH[cur]=CH[cur]||{};
+  $('#picks').innerHTML=used.length
+    ? used.map(n=>`<label>${esc(n)}<select data-g="${esc(n)}"><option value="">선택하세요</option>${g[n].map(o=>`<option value="${esc(o.raw)}" ${pk[n]===o.raw?'selected':''}>${esc(o.name)}</option>`).join('')}</select></label>`).join('')
+    : '<p class="mut">이 반 시간표에는 선택과목 칸이 없어요.</p>';
+  
+  const selectedFontFamily = fontsMap[prefs.font] || fontsMap.rounded;
+
+  let h='<tr><th>교시</th>'+DAYS.map(d=>`<th>${d}</th>`).join('')+'</tr>';
+  for(let p=0;p<D.periods;p++){
+    h+=`<tr><th>${p+1}</th>`+DAYS.map((_,d)=>{
+      const v=D.tt[cur][d][p];
+      if(Object.prototype.hasOwnProperty.call(g,v)){
+        const selected=pk[v];
+        if(!selected)return `<td class="un" style="font-family:${selectedFontFamily}">${esc(v)}<small>미선택</small></td>`;
+        const c=parseCourse(selected);
+        return `<td class="el" style="font-family:${selectedFontFamily}"><strong>${esc(c.name)}</strong>${c.teacher?`<small>${esc(c.teacher)}T</small>`:''}${c.room?`<small>${esc(c.room)}</small>`:''}</td>`;
+      }
+      const c=parseCourse(v);
+      return `<td style="font-family:${selectedFontFamily}"><strong>${esc(c.name)}</strong>${c.teacher?`<small>${esc(c.teacher)}T</small>`:''}${c.room?`<small>${esc(c.room)}</small>`:''}</td>`;
+    }).join('')+'</tr>';
+  }
+  $('#tb').innerHTML=h;
+  applyPrefs();
+  
+  const prefix = (D.grade?D.grade+' ':'')+(D.semester?D.semester+' ':''); $('#scheduleTitle').textContent=prefix+cur+' 시간표';
+  $('#studentNameDisplay').textContent='이름: '+(studentName||'미입력');
+}
+
+$('#cls').onchange=e=>{cur=e.target.value;rS()};
+$('#picks').onchange=e=>{
+  const n=e.target.dataset.g; if(!n)return;
+  const selected=e.target.value;
+  (CH[cur]=CH[cur]||{})[n]=selected;
+  put('tt-pick',CH);
+  rS();
+};
+$('#studentName').value=studentName;
+$('#studentName').oninput=e=>{
+  studentName=e.target.value;
+  put('tt-student-name',studentName);
+  $('#studentNameDisplay').textContent='이름: '+(studentName||'미입력');
+};
+
+const palettes={
+  pink:['#ffe3e8','#f5a8b8','#63313c'],orange:['#ffeadb','#f4b98c','#663b1c'],
+  yellow:['#fff4c9','#e9d47a','#5b4a13'],green:['#e1f3df','#a9d4a5','#294b2b'],
+  blue:['#dff2ff','#9bd4f4','#173b52'],purple:['#eee5ff','#c4a9ed','#463366'],
+  gray:['#eceff2','#c5cbd1','#39434d']
+};
+function applyPrefs(){
+  const c=palettes[prefs.color]||palettes.blue;
+  document.documentElement.style.setProperty('--el',c[0]);
+  document.documentElement.style.setProperty('--elbd',c[1]);
+  document.documentElement.style.setProperty('--elx',c[2]);
+  $('#fontChoice').value=prefs.font; $('#colorChoice').value=prefs.color;
+}
+$('#fontChoice').onchange=e=>{prefs.font=e.target.value;put('tt-prefs',prefs);rS()};
+$('#colorChoice').onchange=e=>{prefs.color=e.target.value;put('tt-prefs',prefs);applyPrefs()};
+$('#pr').onclick=()=>window.print();
+
+function currentGrid(){
+  const g=groups(), pk=CH[cur]||{};
+  return Array.from({length:D.periods},(_,p)=>[
+    `${p+1}교시`,
+    ...DAYS.map((_,d)=>{
+      const v=D.tt[cur][d][p];
+      if(Object.prototype.hasOwnProperty.call(g,v)&&pk[v]){
+        const c=parseCourse(pk[v]);
+        return [c.name,c.teacher?c.teacher+'T':'',c.room].filter(Boolean).join(' / ');
+      }
+      const c=parseCourse(v);
+      return [c.name,c.teacher?c.teacher+'T':'',c.room].filter(Boolean).join(' / ');
+    })
+  ]);
+}
+
+function downloadBlob(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+$('#csv').onclick=()=>{
+  const rows=[['교시',...DAYS],...currentGrid()];
+  const csv='﻿'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8;'}),(studentName||'내')+'_시간표.csv');
+  $('#exportMsg').textContent='CSV 파일을 저장했어요. 엑셀에서 열 수 있어요.';
+};
+
+/* PNG 이미지 생성 - 과목명 Bold / 선생님·장소 Normal(얇게) 분리 렌더링 */
+$('#png').onclick=()=>{
+  const rows=currentGrid(),canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+  const cellW=180,cellH=92,leftW=90,topH=90,pad=36;
+  // 고해상도 PNG: 실제 캔버스 픽셀을 3배로 만들고, 그리기는 기존 크기 기준으로 유지
+  const renderScale=3;
+  const logicalWidth=leftW+cellW*5+pad*2;
+  const logicalHeight=topH+cellH*rows.length+pad*2+20;
+  canvas.width=logicalWidth*renderScale;
+  canvas.height=logicalHeight*renderScale;
+  ctx.scale(renderScale,renderScale);
+  const c=palettes[prefs.color]||palettes.blue;
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+  
+  const currentFontFamily = fontsMap[prefs.font] || fontsMap.rounded;
+
+  // 메인 타이틀
+  ctx.fillStyle='#203040';ctx.textAlign='center';ctx.font=`bold 28px ${currentFontFamily}`;
+  const prefix = (D.grade?D.grade+' ':'')+(D.semester?D.semester+' ':''); ctx.fillText(prefix+cur+' 시간표',canvas.width/2,48);
+  
+  // 오른쪽 이름
+  ctx.textAlign='right';ctx.font=`400 18px ${currentFontFamily}`;ctx.fillStyle='#536575';
+  ctx.fillText('이름: '+(studentName||'미입력'),canvas.width-pad,75);
+
+  const x0=pad,y0=topH;
+  
+  // 셀 드로잉 함수: 과목명·선생님·교실 정보를 모두 셀 정중앙에 배치
+  const drawCell=(x,y,w,h,txt,bg,fg,isHeader=false)=>{
+    ctx.fillStyle=bg;
+    ctx.fillRect(x,y,w,h);
+
+    ctx.strokeStyle='#cbd5df';
+    ctx.lineWidth=1;
+    ctx.strokeRect(x,y,w,h);
+
+    const lines=String(txt).split(' / ').filter(line=>line.trim());
+    const lineSpecs=lines.map((line,i)=>({
+      text:line,
+      font:(isHeader || i===0) ? `bold 18px ${currentFontFamily}` : `400 13px ${currentFontFamily}`,
+      height:(isHeader || i===0) ? 22 : 17
+    }));
+
+    const totalHeight=lineSpecs.reduce((sum,line)=>sum+line.height,0);
+    let cursorY=y+(h-totalHeight)/2;
+
+    ctx.save();
+    ctx.fillStyle=fg;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.direction='ltr';
+
+    lineSpecs.forEach(line=>{
+      ctx.font=line.font;
+      const centerY=cursorY+line.height/2;
+      // 모든 줄의 기준점을 셀의 가로 중앙으로 고정
+      ctx.fillText(line.text,x+(w/2),centerY,w-16);
+      cursorY+=line.height;
+    });
+    ctx.restore();
+  };
+
+  // 교시 & 요일 헤더
+  drawCell(x0,y0,leftW,cellH,'교시','#edf3f7','#536575',true);
+  DAYS.forEach((d,i)=>drawCell(x0+leftW+i*cellW,y0,cellW,cellH,d,'#edf3f7','#536575',true));
+
+  // 시간표 내용
+  rows.forEach((row,r)=>{
+    const y=y0+(r+1)*cellH;
+    drawCell(x0,y,leftW,cellH,row[0],'#f4f7f9','#536575',true);
+    row.slice(1).forEach((v,i)=>{
+      const source=D.tt[cur][i][r];
+      const isElective=Object.prototype.hasOwnProperty.call(groups(),source)&&!!(CH[cur]||{})[source];
+      drawCell(x0+leftW+i*cellW,y,cellW,cellH,v,isElective?c[0]:'#ffffff',isElective?c[2]:'#203040',false);
+    });
+  });
+
+  canvas.toBlob(blob=>{
+    if(blob){
+      pendingBlob=blob;
+      const url=URL.createObjectURL(blob);
+      $('#modalImgBox').innerHTML=`<img src="${url}">`;
+      $('#previewModal').classList.add('active');
+    } else {
+      $('#exportMsg').textContent='이미지 생성에 실패했어요.';
+    }
+  });
+};
+
+$('#btnDownloadImg').onclick=()=>{
+  if(pendingBlob){
+    downloadBlob(pendingBlob, (cur+'_'+(studentName||'내')+'_시간표.png'));
+    $('#exportMsg').textContent='PNG 이미지 파일을 저장했어요.';
+    $('#previewModal').classList.remove('active');
+  }
+};
+$('#btnCloseModal').onclick=()=>{
+  $('#previewModal').classList.remove('active');
+};
+
+$('#changeCode').onclick=()=>{
+  imported=false;put('tt-imported',false);
+  $('#studentArea').hidden=true;
+  $('#topNav').hidden=true;
+  $('#s').hidden=true;
+  $('#a').hidden=true;
+  $('#menuSelect').hidden=false;
+};
+
+$('#adminCodeSetting').value=adminCode;
+$('#adminCodeSetting').onchange=e=>{
+  adminCode=e.target.value.trim()||'1234';
+  put('tt-admin-code',adminCode);
+};
+
+function rGrid(){
+  $('#aCls').innerHTML=D.classes.map(c=>`<option ${c===aCur?'selected':''}>${esc(c)}</option>`).join('');
+  $('#gl').innerHTML=Object.keys(groups()).map(n=>`<option value="${esc(n)}">`).join('');
+  let h='<tr><th></th>'+DAYS.map(d=>`<th>${d}</th>`).join('')+'</tr>';
+  for(let p=0;p<D.periods;p++){
+    h+=`<tr><th>${p+1}</th>`+DAYS.map((_,d)=>`<td><input list="gl" data-d="${d}" data-p="${p}" value="${esc(D.tt[aCur][d][p])}"></td>`).join('')+'</tr>';
+  }
+  $('#grid').innerHTML=h;
+}
+function rA(){
+  fit(); if(!D.classes.includes(aCur))aCur=D.classes[0];
+  $('#gradeIn').value=D.grade||'2학년';
+  $('#semesterIn').value=D.semester||'1학기';
+  $('#clsIn').value=D.classes.join(', ');
+  $('#perIn').value=D.periods;
+  $('#grpIn').value=D.groupText;
+  syncGroupControls();
+  rGrid();
+}
+$('#aCls').onchange=e=>{aCur=e.target.value;rGrid()};
+$('#grid').oninput=e=>{const t=e.target;D.tt[aCur][+t.dataset.d][+t.dataset.p]=t.value.trim();save()};
+$('#btnSaveAdminGrid').onclick=()=>{
+  save();
+  $('#saveMsg').textContent='성공적으로 저장되었습니다! 이제 하단에서 [코드 만들기]를 눌러 새 코드를 복사·공유하세요.';
+  setTimeout(()=>{$('#saveMsg').textContent='';}, 4000);
+};
+$('#grpIn').oninput=e=>{D.groupText=e.target.value;save();syncGroupControls();rGrid()};
+function renameGroups(names){
+  const old=groupLines();
+  const lines=names.map((name,i)=>{
+    const prior=old[i]||''; const colon=prior.search(/[:：]/);
+    return name.trim()+': '+(colon>=0?prior.slice(colon+1).trim():'');
+  });
+  D.groupText=lines.join('\n'); save(); $('#grpIn').value=D.groupText; rGrid(); rS();
+}
+$('#groupCount').onchange=e=>{
+  const count=Math.min(12,Math.max(1,Number(e.target.value)||1));
+  const current=groupLines();
+  while(current.length<count){const n=String.fromCharCode(65+current.length);current.push(`선택${n}: `);}
+  current.length=count; D.groupText=current.join('\n'); save(); $('#grpIn').value=D.groupText; syncGroupControls(); rGrid(); rS();
+};
+$('#groupNames').onchange=e=>{
+  const names=e.target.value.split(/[,，]/).map(x=>x.trim()).filter(Boolean).slice(0,12);
+  if(!names.length)return;
+  $('#groupCount').value=names.length; renameGroups(names);
+};
+$('#gradeIn').onchange=e=>{D.grade=e.target.value.trim()||''; save(); rS();};
+$('#semesterIn').onchange=e=>{D.semester=e.target.value.trim()||''; save(); rS();};
+$('#clsIn').onchange=e=>{
+  const c=e.target.value.split(/[,，]/).map(x=>x.trim()).filter(Boolean);
+  if(!c.length)return; D.classes=[...new Set(c)]; save(); rA();
+};
+$('#perIn').onchange=e=>{D.periods=Math.min(10,Math.max(1,+e.target.value||7)); save(); rA()};
+
+const toB64=bytes=>{let bin='';for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);return btoa(bin)};
+const fromB64=str=>Uint8Array.from(atob(str),c=>c.charCodeAt(0));
+async function encodeCode(o){
+  const bytes=new TextEncoder().encode(JSON.stringify(o));
+  if('CompressionStream' in window){
+    const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+    const compressed=new Uint8Array(await new Response(stream).arrayBuffer());
+    return 'z:'+toB64(compressed);
+  }
+  return 'j:'+toB64(bytes);
+}
+async function decodeCode(raw){
+  const value=raw.trim();
+  if(value.startsWith('z:')){
+    if(!('DecompressionStream' in window))throw new Error('압축 해제 미지원');
+    const stream=new Blob([fromB64(value.slice(2))]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return JSON.parse(new TextDecoder().decode(await new Response(stream).arrayBuffer()));
+  }
+  if(value.startsWith('j:'))return JSON.parse(new TextDecoder().decode(fromB64(value.slice(2))));
+  return JSON.parse(decodeURIComponent(escape(atob(value))));
+}
+$('#mk').onclick=async()=>{$('#outCode').value=await encodeCode(D);$('#cmsg').textContent='압축 코드를 만들었어요. 이전보다 짧아져 단체방에 공유하기 편해요.'};
+$('#cp').onclick=async()=>{
+  const t=$('#outCode'); if(!t.value)t.value=await encodeCode(D);
+  try{await navigator.clipboard.writeText(t.value);$('#cmsg').textContent='복사했어요.'}
+  catch(e){t.select();$('#cmsg').textContent='코드를 선택했어요. 직접 복사해 주세요.'}
+};
+$('#load').onclick=async()=>{
+  try{
+    const o=await decodeCode($('#inCode').value);
+    if(!o.classes||!o.tt||!o.periods||typeof o.groupText!=='string')throw 0;
+    D=o; save(); fit(); imported=true;put('tt-imported',true);
+    $('#importCard').hidden=true;$('#studentArea').hidden=false;
+    $('#topNav').hidden=false;
+    document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==='s'));
+    $('#s').hidden=false;$('#a').hidden=true;
+    rS(); rA(); 
+    $('#msg').textContent='불러왔어요. 이름과 반, 선택과목을 입력해 시간표를 확인하세요.';
+  }catch(e){
+    alert('코드가 틀렸습니다.');
+  }
+};
+let armed=false;
+$('#reset').onclick=e=>{
+  if(!armed){armed=true;e.target.textContent='한 번 더 누르면 입력한 내용이 지워져요';return}
+  armed=false;e.target.textContent='샘플로 되돌리기';D=sample();save();rA();rS();
+};
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  if(b.hidden)return;
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  $('#s').hidden=b.dataset.tab!=='s'; $('#a').hidden=b.dataset.tab!=='a';
+  if(b.dataset.tab==='s')rS();
+});
+
+fit();
+applyPrefs();
+</script>
+</body>
+</html>
